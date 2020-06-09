@@ -2,6 +2,10 @@
 
 namespace Lifeonscreen\Google2fa;
 
+use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use BaconQrCode\Renderer\ImageRenderer;
+use BaconQrCode\Renderer\RendererStyle\RendererStyle;
+use BaconQrCode\Writer;
 use Laravel\Nova\Tool;
 use PragmaRX\Google2FA\Google2FA as G2fa;
 use PragmaRX\Recovery\Recovery;
@@ -31,11 +35,7 @@ class Google2fa extends Tool
             return response()->redirectTo(config('nova.path'));
         }
 
-        $data['google2fa_url'] = (new G2fa)->getQRCodeUrl(
-            config('app.name'),
-            auth()->user()->email,
-            auth()->user()->user2fa->google2fa_secret
-        );
+        $data['google2fa_url'] = $this->getQrCodeUrl();
         $data['error'] = 'Secret is invalid.';
 
         return view('google2fa::register', $data);
@@ -47,14 +47,16 @@ class Google2fa extends Tool
      */
     public function register()
     {
-        $data['google2fa_url'] = (new G2fa)->getQRCodeUrl(
-            config('app.name'),
-            auth()->user()->email,
-            auth()->user()->user2fa->google2fa_secret
+        $writer = new Writer(
+            new ImageRenderer(
+                new RendererStyle(400),
+                new SvgImageBackEnd()
+            )
         );
 
-        return view('google2fa::register', $data);
+        $data['google2fa_url'] = $this->getQrCodeUrl();
 
+        return view('google2fa::register', $data);
     }
 
     private function isRecoveryValid($recover, $recoveryHashes)
@@ -113,5 +115,23 @@ class Google2fa extends Tool
         $data['error'] = 'One time password is invalid.';
 
         return view('google2fa::authenticate', $data);
+    }
+
+    protected function getQrCodeUrl()
+    {
+        $writer = new Writer(
+            new ImageRenderer(
+                new RendererStyle(400),
+                new SvgImageBackEnd()
+            )
+        );
+
+        return 'data:image/svg+xml;base64, ' . base64_encode(
+                $writer->writeString((new G2fa)->getQRCodeUrl(
+                    config('app.name'),
+                    auth()->user()->email,
+                    auth()->user()->user2fa->google2fa_secret
+                ))
+            );
     }
 }
