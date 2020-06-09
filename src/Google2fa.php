@@ -31,16 +31,11 @@ class Google2fa extends Tool
             return response()->redirectTo(config('nova.path'));
         }
 
-        $google2fa = new G2fa();
-        //$google2fa->setAllowInsecureCallToGoogleApis(true);
-
-        $google2fa_url = $google2fa->getQRCodeGoogleUrl(
+        $data['google2fa_url'] = (new G2fa)->getQRCodeUrl(
             config('app.name'),
             auth()->user()->email,
             auth()->user()->user2fa->google2fa_secret
         );
-
-        $data['google2fa_url'] = $google2fa_url;
         $data['error'] = 'Secret is invalid.';
 
         return view('google2fa::register', $data);
